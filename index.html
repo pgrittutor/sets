@@ -164,7 +164,7 @@
                 return;
             }
             
-            previewWindow = window.open('', 'LivePreview', 'width=800,height=500,menubar=no,toolbar=no,location=no,status=no');
+            previewWindow = window.open('', 'LivePreview', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
             
             previewWindow.document.write(`
                 <!DOCTYPE html>
@@ -175,7 +175,7 @@
                     <script src="https://cdn.tailwindcss.com"><\/script>
                     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
                     <style>
-                        body { font-family: 'Kanit', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f8fafc; margin: 0; padding: 20px;}
+                        body { font-family: 'Kanit', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-color: #f8fafc; margin: 0; padding: 20px;}
                         .preview-container { padding: 2rem; background: white; border-radius: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); width: 100%; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;}
                         .pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
                         @keyframes popIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
@@ -185,6 +185,7 @@
                     <div class="preview-container text-2xl md:text-5xl font-medium text-slate-800" id="live-content">
                         ${displayEl.innerHTML}
                     </div>
+                    <div id="live-controls" class="mt-8 flex justify-center w-full"></div>
                 </body>
                 </html>
             `);
@@ -194,13 +195,33 @@
             previewWindow.onbeforeunload = () => {
                 previewWindow = null;
             };
+
+            // เรียกอัปเดตทันทีเพื่อสร้างปุ่ม
+            updateLivePreview();
         }
 
         function updateLivePreview() {
             if (previewWindow && !previewWindow.closed) {
                 const targetEl = previewWindow.document.getElementById('live-content');
+                const controlsEl = previewWindow.document.getElementById('live-controls');
+                
                 if (targetEl) {
                     targetEl.innerHTML = displayEl.innerHTML;
+                    
+                    // เพิ่มปุ่มพาวเวอร์เซตในหน้า preview (ดึงคำสั่งจาก window.opener)
+                    if (currentMode === 'powerset' && controlsEl) {
+                        const isAnimating = powersetControls.querySelector('button').disabled;
+                        const btnStateClass = isAnimating ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1 hover:shadow-xl';
+                        controlsEl.innerHTML = `
+                            <button onclick="if(window.opener) window.opener.startPowerSetAnimation()" ${isAnimating ? 'disabled' : ''} class="px-8 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-full shadow-lg transform transition-all flex items-center gap-2 ${btnStateClass}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                เริ่มสร้างพาวเวอร์เซต
+                            </button>
+                        `;
+                    } else if (controlsEl) {
+                        controlsEl.innerHTML = ''; // ลบปุ่มออกถ้าไม่ได้อยู่โหมดพาวเวอร์เซต
+                    }
+
                     // Auto scroll to bottom if needed (e.g., during powerset generation)
                     previewWindow.scrollTo({ top: previewWindow.document.body.scrollHeight, behavior: 'smooth' });
                 }
@@ -407,6 +428,7 @@
 
             powersetControls.querySelector('button').disabled = true;
             powersetControls.querySelector('button').classList.add('opacity-50', 'cursor-not-allowed');
+            updateLivePreview(); // อัปเดตสถานะปุ่มในหน้า Live Preview เป็นสถานะโหลดทันที
 
             const subsets = getSubsets(mainSet);
             const mainSetString = `{ ${mainSet.join(', ')} }`;
@@ -530,6 +552,7 @@
             // เปิดปุ่มให้กดใหม่ได้
             powersetControls.querySelector('button').disabled = false;
             powersetControls.querySelector('button').classList.remove('opacity-50', 'cursor-not-allowed');
+            updateLivePreview(); // อัปเดตสถานะปุ่มใน Live Preview อีกครั้ง
         }
 
         // Initialize
