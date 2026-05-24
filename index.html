@@ -207,10 +207,40 @@
             }
         }
 
+        function splitSetElements(input) {
+            let result = [];
+            let current = '';
+            let depth = 0; // ตัวนับว่าตอนนี้เราอยู่ลึกเข้าไปในปีกกากี่ชั้น
+            
+            for (let i = 0; i < input.length; i++) {
+                let char = input[i];
+                if (char === '{') {
+                    depth++; // เข้าไปในปีกกา
+                    current += char;
+                } else if (char === '}') {
+                    if (depth > 0) depth--; // ออกจากปีกกา
+                    current += char;
+                } else if (char === ',' && depth === 0) {
+                    // จะตัดคำ (split) ก็ต่อเมื่อเจอลูกน้ำ และไม่ได้อยู่ในปีกกา (depth === 0)
+                    if (current.trim() !== '') result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            // เก็บก้อนสุดท้ายที่เหลืออยู่
+            if (current.trim() !== '') {
+                result.push(current.trim());
+            }
+            return result;
+        }
+
         function parseInput() {
             const rawValue = inputEl.value;
-            // Split by comma, trim whitespace, remove empty strings
-            mainSet = rawValue.split(',').map(s => s.trim()).filter(s => s !== '');
+            
+            // แยกสมาชิกโดยใช้ฟังก์ชันใหม่ แทนการ split(',') ธรรมดา
+            mainSet = splitSetElements(rawValue);
+            
             // Remove duplicates
             mainSet = [...new Set(mainSet)];
             
